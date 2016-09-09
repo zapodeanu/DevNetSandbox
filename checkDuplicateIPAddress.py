@@ -59,8 +59,9 @@ def check_client_IP_address(clientIP, ticket):
         host_info = host_json['response'][0]
         interfaceName = host_info['connectedInterfaceName']
         deviceId = host_info['connectedNetworkDeviceId']
-        hostName = get_hostname_id(deviceId, ticket)
-        print ('The IP address ', clientIP, ' is connected to the network device ', hostName, ' , interface ', interfaceName)
+        hostName = get_hostname_id(deviceId, ticket)[0]
+        devicetype = get_hostname_id(deviceId, ticket)[1]
+        print ('The IP address ', clientIP, ' is connected to the network device ', hostName, ',  ', devicetype, ',  interface ', interfaceName)
         return hostName, interfaceName
 
 
@@ -81,8 +82,9 @@ def get_interface_name(interfaceIP, ticket):
         interfaceInfo = interfaceInfo_json['response'][0]
         interfaceName = interfaceInfo['portName']
         deviceId = interfaceInfo['deviceId']
-        hostName = get_hostname_id(deviceId, ticket)
-        print('The IP address ', interfaceIP, ' is configured on network device ', hostName, ', interface ', interfaceName)
+        hostName = get_hostname_id(deviceId, ticket)[0]
+        devicetype = get_hostname_id(deviceId, ticket)[1]
+        print('The IP address ', interfaceIP, ' is configured on network device ', hostName, ',  ', devicetype, ',  interface ', interfaceName)
         return hostName, deviceId
 
 
@@ -98,7 +100,8 @@ def get_hostname_id(deviceId, ticket):
     hostname_json = hostname_response.json()
 #    print (json.dumps(hostname_json, indent=4, separators=(' , ', ' : ')))  # print json output, optional, remove the comment from the beginning of the line
     hostname = hostname_json['response']['hostname']
-    return hostname
+    devicetype =  hostname_json['response']['type']
+    return hostname, devicetype
 
 
 def main():
