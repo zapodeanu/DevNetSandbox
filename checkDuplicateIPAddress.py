@@ -13,7 +13,7 @@ import json
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)  # Disable insecure https warnings
 
-# definitions for Sandbox APIC-EM API url, username and password
+# declarations for Sandbox APIC-EM API url, username and password
 
 CONTROLLER_URL = 'sandboxapic.cisco.com/api/v1'
 CONTROLLER_USER = 'devnetuser'
@@ -22,6 +22,7 @@ CONTROLLER_PASSW = 'Cisco123!'
 
 # This function will generate the Auth ticket required to access APIC-EM
 # The function will return the Auth ticket, if successful
+# API call to sandboxapic.cisco.com/api/v1/ticket, type post, is used to create a new user ticket
 
 def get_service_ticket():
     ticket = None
@@ -48,15 +49,16 @@ def get_input_IP():
 
 
 # The function will find out if APIC-EM has a client device configured with the specified IP address
-# The function will require two values, the Auth ticket and the IP address
+# The function will require two values, the Auth ticket and the client IP address
 # The function will return the network device name and the interface the client is connected to
+# API call to sandboxapic.cisco.com/api/v1/host, type get, get host with hostIp (string): IP address of the host
 
 def check_client_IP_address(clientIP, ticket):
     interfaceName = None
     hostname = None
     host_info = None
     url = 'https://' + CONTROLLER_URL + '/host'
-    header = {'content-type': 'application/json', 'X-Auth-Token': ticket}
+    header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     payload = {'hostIp': clientIP}
     host_response = requests.get(url, params=payload, headers=header, verify=False)
     host_json = host_response.json()
@@ -73,13 +75,15 @@ def check_client_IP_address(clientIP, ticket):
 
 
 # The function will find out if APIC-EM has a network device with the specified IP address configured on an interface
-# The function will require two values, the Auth ticket and the IP address
+# The function will require two values, the Auth ticket and the interface IP address
 # The function will return the interface name and device ID, to be used for future use cases
+# API call to sandboxapic.cisco.com/api/v1/interface/ip-address/{ipAddress},
+# type get, gets list of interfaces with the given IP address
 
 def get_interface_name(interfaceIP, ticket):
     interfaceInfo = None
     url = 'https://' + CONTROLLER_URL + '/interface/ip-address/' + interfaceIP
-    header = {'content-type': 'application/json', 'X-Auth-Token': ticket}
+    header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     interfaceInfo_response = requests.get(url, headers=header, verify=False)
     if not interfaceInfo_response:
         print ('The IP address ', interfaceIP, ' is not configured on any network devices')
@@ -96,13 +100,15 @@ def get_interface_name(interfaceIP, ticket):
 
 
 # The function will find out the hostname of the network device with the specified device ID
-# The function will require two values, the Auth ticket and the device ID
-# The function with return the hostname of the network device
+# The function will require two values, the Auth ticket device id
+# The function with return the hostname and the device type of the network device
+# API call to sandboxapic.cisco.com/api/v1/network-device/id
+# type get, gets the network device for the given device ID
 
 def get_hostname_id(deviceId, ticket):
     hostname = None
     url = 'https://' + CONTROLLER_URL + '/network-device/' + deviceId
-    header = {'content-type': 'application/json', 'X-Auth-Token': ticket}
+    header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     hostname_response = requests.get(url, headers=header, verify=False)
     hostname_json = hostname_response.json()
 #    print (json.dumps(hostname_json, indent=4, separators=(' , ', ' : ')))  # print json output, optional, remove the comment from the beginning of the line
@@ -110,6 +116,7 @@ def get_hostname_id(deviceId, ticket):
     devicetype =  hostname_json['response']['type']
     return hostname, devicetype
 
+# the main function of the program
 
 def main():
     ticket = get_service_ticket()
@@ -122,5 +129,6 @@ def main():
         else:
             break
 
+if __name__ == '__main__':
+    main()
 
-main()
