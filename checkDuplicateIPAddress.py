@@ -1,6 +1,13 @@
 
 #!/usr/bin/env python3
 
+
+# This script will validate if user provided IP addresses are already configured on a network device,
+# either if the interface is up or down. It will also validate if a client may be using the IP address.
+# If the IP address is being used, it will provide the hostname of the network device
+# the model and the interface configured with the IP address, or connected to the client using the IP address.
+
+
 import requests
 import json
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -36,7 +43,7 @@ def get_service_ticket():
 
 def get_input_IP():
     interfaceIP = None
-    interfaceIP = input('What is the IP address?  ')
+    interfaceIP = input('Input q to exit or the IP address?  ')
     return interfaceIP
 
 
@@ -106,9 +113,14 @@ def get_hostname_id(deviceId, ticket):
 
 def main():
     ticket = get_service_ticket()
-    interfaceIP = get_input_IP()
-    check_client_IP_address(interfaceIP, ticket)
-    get_interface_name(interfaceIP, ticket)
+    interfaceIP = None
+    while interfaceIP != "q":    # this loop will allow running the validation multiple times, until user input is 'q'
+        interfaceIP = get_input_IP()
+        if interfaceIP != 'q':
+            check_client_IP_address(interfaceIP, ticket)
+            get_interface_name(interfaceIP, ticket)
+        else:
+            break
 
 
 main()
