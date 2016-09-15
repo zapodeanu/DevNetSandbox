@@ -5,7 +5,7 @@
 # This script will validate if user provided IP addresses are already configured on a network device,
 # either if the interface is up or down. It will also validate if a client may be using the IP address.
 # If the IP address is being used, it will provide the hostname of the network device
-# the model and the interface configured with the IP address, or connected to the client using the IP address.
+# the model and the interface configured with the IP address, or the interface connected to the client using the IP address.
 
 
 import requests
@@ -149,6 +149,7 @@ def get_hostname_IP(deviceIP, ticket):
 
 
 # the main function of the program
+# a while loop will allow to check multiple IP addresses, until user input is 'q'
 
 def main():
     ticket = get_service_ticket()
