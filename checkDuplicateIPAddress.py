@@ -66,11 +66,16 @@ def check_client_IP_address(clientIP, ticket):
         print ('The IP address ', clientIP, ' is not used by any client devices')
     else:
         host_info = host_json['response'][0]
-        interfaceName = host_info['connectedInterfaceName']
-        deviceId = host_info['connectedNetworkDeviceId']
+        hostType = host_info['hostType']
+        if hostType == 'wireless':     # verification required for wireless clients, JSON output is different for wireless vs. wired clients
+            deviceId = host_info['connectedNetworkDeviceId']
+            interfaceName = 'VLAN '+ host_info['vlanId']
+        else:
+            interfaceName = host_info['connectedInterfaceName']
+            deviceId = host_info['connectedNetworkDeviceId']
         hostName = get_hostname_id(deviceId, ticket)[0]
         devicetype = get_hostname_id(deviceId, ticket)[1]
-        print ('The IP address ', clientIP, ' is connected to the network device ', hostName, ',  ', devicetype, ',  interface ', interfaceName)
+        print('The IP address ', clientIP, ' is connected to the network device ', hostName, ',  ', devicetype, ',  interface ', interfaceName)
         return hostName, interfaceName
 
 
@@ -86,7 +91,17 @@ def get_interface_name(interfaceIP, ticket):
     header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     interfaceInfo_response = requests.get(url, headers=header, verify=False)
     if not interfaceInfo_response:
-        print ('The IP address ', interfaceIP, ' is not configured on any network devices')
+        deviceIP = interfaceIP
+        url = 'https://' + CONTROLLER_URL + '/network-device/ip-address/' + deviceIP    # verification required by wireless AP's IP address
+        header = {'accept': 'application/json', 'X-Auth-Token': ticket}
+        deviceInfo_response = requests.get(url, headers=header, verify=False)
+        if not deviceInfo_response:
+            print ('The IP address ', interfaceIP, ' is not configured on any network devices')
+        else:
+            hostName = get_hostname_IP(deviceIP, ticket)[0]
+            devicetype = get_hostname_IP(deviceIP, ticket)[1]
+            print('The IP address ', deviceIP, ' is configured on network device ', hostName, ',  ', devicetype)
+            return hostName
     else:
         interfaceInfo_json = interfaceInfo_response.json()
 #        print (json.dumps(interfaceName_json, indent=4, separators=(' , ', ' : ')))  # print json output, optional, remove the comment from the beginning of the line
@@ -96,14 +111,13 @@ def get_interface_name(interfaceIP, ticket):
         hostName = get_hostname_id(deviceId, ticket)[0]
         devicetype = get_hostname_id(deviceId, ticket)[1]
         print('The IP address ', interfaceIP, ' is configured on network device ', hostName, ',  ', devicetype, ',  interface ', interfaceName)
-        return hostName, deviceId
+        return hostName
 
 
 # The function will find out the hostname of the network device with the specified device ID
-# The function will require two values, the Auth ticket device id
+# The function will require two values, the Auth ticket and device id
 # The function with return the hostname and the device type of the network device
-# API call to sandboxapic.cisco.com/api/v1/network-device/id
-# type get, gets the network device for the given device ID
+# API call to sandboxapic.cisco.com/api/v1/network-device/{id}
 
 def get_hostname_id(deviceId, ticket):
     hostname = None
@@ -116,6 +130,24 @@ def get_hostname_id(deviceId, ticket):
     devicetype =  hostname_json['response']['type']
     return hostname, devicetype
 
+
+# The function will find out the hostname of the network device with the specified management IP address
+# The function will require two values, the Auth ticket and management IP address
+# The function with return the hostname and the device type of the network device
+# API call to sandboxapic.cisco.com/api/v1/network-device/ip-address/{ip-address}
+
+def get_hostname_IP(deviceIP, ticket):
+    hostname = None
+    url = 'https://' + CONTROLLER_URL + '/network-device/ip-address/' + deviceIP
+    header = {'accept': 'application/json', 'X-Auth-Token': ticket}
+    hostname_response = requests.get(url, headers=header, verify=False)
+    hostname_json = hostname_response.json()
+#    print (json.dumps(hostname_json, indent=4, separators=(' , ', ' : ')))  # print json output, optional, remove the comment from the beginning of the line
+    hostname = hostname_json['response']['hostname']
+    devicetype =  hostname_json['response']['type']
+    return hostname, devicetype
+
+
 # the main function of the program
 
 def main():
@@ -126,8 +158,7 @@ def main():
         if interfaceIP != 'q':
             check_client_IP_address(interfaceIP, ticket)
             get_interface_name(interfaceIP, ticket)
-        else:
-            break
+
 
 if __name__ == '__main__':
     main()
