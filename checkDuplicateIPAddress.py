@@ -22,7 +22,7 @@ CONTROLLER_PASSW = 'Cisco123!'
 
 # This function will generate the Auth ticket required to access APIC-EM
 # The function will return the Auth ticket, if successful
-# API call to sandboxapic.cisco.com/api/v1/ticket, type post, is used to create a new user ticket
+# API call to sandboxapic.cisco.com/api/v1/ticket is used to create a new user ticket
 
 def get_service_ticket():
     ticket = None
@@ -51,7 +51,8 @@ def get_input_IP():
 # The function will find out if APIC-EM has a client device configured with the specified IP address
 # The function will require two values, the Auth ticket and the client IP address
 # The function will return the network device name and the interface the client is connected to
-# API call to sandboxapic.cisco.com/api/v1/host, type get, get host with hostIp (string): IP address of the host
+# API call to sandboxapic.cisco.com/api/v1/host, get host with hostIp (string): IP address of the host
+# The JSON response is different for wired and wireless client
 
 def check_client_IP_address(clientIP, ticket):
     interfaceName = None
@@ -81,9 +82,10 @@ def check_client_IP_address(clientIP, ticket):
 
 # The function will find out if APIC-EM has a network device with the specified IP address configured on an interface
 # The function will require two values, the Auth ticket and the interface IP address
-# The function will return the interface name and device ID, to be used for future use cases
-# API call to sandboxapic.cisco.com/api/v1/interface/ip-address/{ipAddress},
-# type get, gets list of interfaces with the given IP address
+# The function will return the hostname of the device
+# API call to sandboxapic.cisco.com/api/v1/interface/ip-address/{ipAddress}, gets list of interfaces with the given IP address.
+# The JSON response is different for wireless AP's comparing with switches and routers.
+# There is a nested function, get_hostname_IP , to find out the information about wireless AP's based on the management IP address
 
 def get_interface_name(interfaceIP, ticket):
     interfaceInfo = None
@@ -104,7 +106,7 @@ def get_interface_name(interfaceIP, ticket):
             return hostName
     else:
         interfaceInfo_json = interfaceInfo_response.json()
-#        print (json.dumps(interfaceName_json, indent=4, separators=(' , ', ' : ')))  # print json output, optional, remove the comment from the beginning of the line
+#        print (json.dumps(interfaceName_json, indent=4, separators=(' , ', ' : ')))  # sample print json output, optional, remove the comment from the beginning of the line
         interfaceInfo = interfaceInfo_json['response'][0]
         interfaceName = interfaceInfo['portName']
         deviceId = interfaceInfo['deviceId']
@@ -125,7 +127,6 @@ def get_hostname_id(deviceId, ticket):
     header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     hostname_response = requests.get(url, headers=header, verify=False)
     hostname_json = hostname_response.json()
-#    print (json.dumps(hostname_json, indent=4, separators=(' , ', ' : ')))  # print json output, optional, remove the comment from the beginning of the line
     hostname = hostname_json['response']['hostname']
     devicetype =  hostname_json['response']['type']
     return hostname, devicetype
@@ -142,7 +143,6 @@ def get_hostname_IP(deviceIP, ticket):
     header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     hostname_response = requests.get(url, headers=header, verify=False)
     hostname_json = hostname_response.json()
-#    print (json.dumps(hostname_json, indent=4, separators=(' , ', ' : ')))  # print json output, optional, remove the comment from the beginning of the line
     hostname = hostname_json['response']['hostname']
     devicetype =  hostname_json['response']['type']
     return hostname, devicetype
