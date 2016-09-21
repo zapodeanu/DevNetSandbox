@@ -31,9 +31,6 @@ def get_service_ticket():
         print ('APIC-EM ticket: ', ticket)    # print the ticket for reference only, not required
         return ticket
 
-# definition for a test deviceId
-deviceId = '80036c7d-c82e-412c-ac01-b05f9badfcba'
-
 
 # The function will find out the active licenses of the network device with the specified device ID
 # The function will require two values, the Auth ticket and device id
@@ -53,8 +50,7 @@ def get_license_device (deviceId, ticket):
             device_info= device_json['response'][licenseIndex]
             if device_info['status'] == "INUSE":
                 licenseInfo.append(device_info['name'])
-#                print ('device JSON  ', device_info)    # print license info for each device, optional or for troubleshooting
-            licenseIndex = licenseIndex + 1
+            licenseIndex += 1
     except:
 #        print ('This device has ', licenseIndex, 'possible licenses', ', Active licenses on this device: ', licenseInfo)    # this is for troubleshooting
         return licenseInfo
