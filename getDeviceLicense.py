@@ -38,22 +38,20 @@ def get_service_ticket():
 # API call to sandboxapic.cisco.com/api/v1//license-info/network-device/{id}
 
 def get_license_device (deviceId, ticket):
+    licenseInfo = []
     url = 'https://' + CONTROLLER_URL + '/license-info/network-device/' + deviceId
     header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     payload = {'deviceId': deviceId}
     device_response = requests.get(url, params=payload, headers=header, verify=False)
     device_json = device_response.json()
-    licenseIndex = int(0)
-    licenseInfo = []
-    try:
-        while licenseIndex < 20:
-            device_info= device_json['response'][licenseIndex]
-            if device_info['status'] == "INUSE":
-                licenseInfo.append(device_info['name'])
-            licenseIndex += 1
-    except:
-#        print ('This device has ', licenseIndex, 'possible licenses', ', Active licenses on this device: ', licenseInfo)    # this is for troubleshooting
-        return licenseInfo
+    device_info = device_json['response']
+    for licenses in device_info:
+        try:
+            if licenses.get('status') == "INUSE":
+                licenseInfo.append(licenses.get('name'))
+        except:
+            pass
+    return licenseInfo
 
 
 # The function will find out the hostname of the network device with the specified device ID
@@ -81,60 +79,58 @@ def get_input_file():
     return filename
 
 
-# The function will find the number of discovered network
-# The function will require one value, the Auth ticket
-# The function with return the count of devices
-# API call to sandboxapic.cisco.com/api/v1/network-device/count
-
-def get_device_count(ticket):
-    hostname = None
-    url = 'https://' + CONTROLLER_URL + '/network-device/count'
-    header = {'accept': 'application/json', 'X-Auth-Token': ticket}
-    count_response = requests.get(url, headers=header, verify=False)
-    count_json = count_response.json()
-    count = count_json['response']
-    return count
-
-
 # The function will build a list of ID's for all network devices
-# The function will require two values, the Auth ticket and count of devices
+# The function will require one value, the Auth ticket
 # The function with return the device's ID as a list
 # API call to sandboxapic.cisco.com/api/v1/network-device
 
-def get_device_Ids(count, ticket):
+def get_device_Ids(ticket):
     deviceIdList = []
-    device_info = {}
-    index = 0
     url = 'https://' + CONTROLLER_URL + '/network-device'
     header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     device_response = requests.get(url, headers=header, verify=False)
     device_json = device_response.json()
-    while index < count:
-        device_info = device_json['response'][index]
-        deviceIdList.append(device_info.get('id'))
-        index += 1
+    device_info = device_json['response']
+    for items in device_info:
+        device_id = items.get('id')
+        deviceIdList.append(device_id)
     return deviceIdList
+
+
+# The function will create a list with a row for each device hostname, Serial Number, Licenses
+# The function will require two values, the list with all device Id's and the Auth ticket
+# The function with return list with a row for each device
+
+def collect_device_info (device_Id_list, ticket):
+    all_devices_license_file = []
+    for device_Id in device_Id_list:    # loop to collect data from each device
+        license_file = []
+        print ('device Id ', device_Id)    # print device Id, printing messages will show progress
+        host_name = get_hostname_devicetype_serialnumber(device_Id, ticket)[0]
+        serial_number = get_hostname_devicetype_serialnumber(device_Id, ticket)[2]
+        license_file.append(host_name)
+        license_file.append(serial_number)
+        devicelicense = get_license_device(device_Id, ticket)
+        for licenses in devicelicense:
+            license_file.append(licenses)
+        all_devices_license_file.append(license_file)
+#    print(json.dumps(all_devices_license_file, indent=4, separators=(' , ', ' : ')))
+    return all_devices_license_file
 
 
 # main program
 
 def main():
     ticket = get_service_ticket()
-    device_count = get_device_count(ticket)
-    device_Id_list = get_device_Ids(device_count, ticket)
-    license_file = []
-    device_index = 0
-    while device_index < device_count:    # loop to collect data from each device
-        device_Id = device_Id_list[device_index]
-        print ('index ', device_index, device_Id)    # print index, device Id, will improve visibility of script running
-        host_name = get_hostname_devicetype_serialnumber(device_Id, ticket)[0]
-        serial_number = get_hostname_devicetype_serialnumber(device_Id, ticket)[2]
-        license_file.append(host_name)
-        license_file.append(serial_number)
-        license = get_license_device(device_Id_list[device_index], ticket)
-        license_file.append(license)
-        device_index += 1
-    print(json.dumps(license_file, indent=4, separators=(' , ', ' : ')))
+    device_Id_list = get_device_Ids(ticket)
+    devices_info = collect_device_info(device_Id_list, ticket)
+    filename = get_input_file()
+    outputFile = open(filename, 'w', newline='')
+    outputWriter = csv.writer(outputFile)
+    for lists in devices_info:
+        outputWriter.writerow(lists)
+    outputFile.close()
+    print (devices_info)
 
 if __name__ == '__main__':
     main()
