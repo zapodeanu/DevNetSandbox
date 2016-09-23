@@ -48,7 +48,9 @@ def get_license_device (deviceId, ticket):
     for licenses in device_info:
         try:
             if licenses.get('status') == "INUSE":
-                licenseInfo.append(licenses.get('name'))
+                new_license = licenses.get('name')
+                if new_license not in licenseInfo:
+                    licenseInfo.append(new_license)
         except:
             pass
     return licenseInfo
@@ -72,10 +74,10 @@ def get_hostname_devicetype_serialnumber(deviceId, ticket):
 
 
 # This function will ask the user to input the file name to save data to
-# The function will return the file name
+# The function will return the file name, after appending .csv
 
 def get_input_file():
-    filename = input('Input the file name to save data to:  ')
+    filename = input('Input the file name to save data to:  ') + '.csv'
     return filename
 
 
