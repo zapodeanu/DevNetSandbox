@@ -14,7 +14,7 @@ CONTROLLER_USER = 'devnetuser'
 CONTROLLER_PASSW = 'Cisco123!'
 
 
-# This function will generate the Auth ticket required to access APIC-EM
+# The function will generate the Auth ticket required to access APIC-EM
 # The function will return the Auth ticket, if successful
 
 def get_service_ticket():
@@ -24,7 +24,7 @@ def get_service_ticket():
     header = {'content-type': 'application/json'}
     ticket_response = requests.post(url,data = json.dumps(payload), headers = header, verify = False)
     if not ticket_response:
-        print ('No data returned!')
+        print ('Something went wrong, try again!')
     else:
         ticket_json = ticket_response.json()
         ticket = ticket_json['response']['serviceTicket']
@@ -33,12 +33,12 @@ def get_service_ticket():
 
 
 # The function will find out the active licenses of the network device with the specified device ID
-# The function will require two values, the Auth ticket and device id
-# The function with return a list with all active licenses of the network device
+# The function will require two values, the device id and the Auth ticket
+# The function will return a list with all active licenses of the network device
 # API call to sandboxapic.cisco.com/api/v1//license-info/network-device/{id}
 
 def get_license_device (deviceId, ticket):
-    licenseInfo = []
+    license_info = []
     url = 'https://' + CONTROLLER_URL + '/license-info/network-device/' + deviceId
     header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     payload = {'deviceId': deviceId}
@@ -46,19 +46,19 @@ def get_license_device (deviceId, ticket):
     device_json = device_response.json()
     device_info = device_json['response']
     for licenses in device_info:
-        try:
+        try:    # required to avoid errors due to some devices, for example Access Points, that do not have an "inuse" license.
             if licenses.get('status') == "INUSE":
                 new_license = licenses.get('name')
-                if new_license not in licenseInfo:
-                    licenseInfo.append(new_license)
+                if new_license not in license_info:
+                    license_info.append(new_license)
         except:
             pass
-    return licenseInfo
+    return license_info
 
 
 # The function will find out the hostname of the network device with the specified device ID
-# The function will require two values, the Auth ticket and device id
-# The function with return the hostname, the device type, and serial number of the network device
+# The function will require two values, the device id and the Auth ticket
+# The function will return a list with the hostname, the device type, and serial number of the network device
 # API call to sandboxapic.cisco.com/api/v1/network-device/{id}
 
 def get_hostname_devicetype_serialnumber(deviceId, ticket):
@@ -73,21 +73,21 @@ def get_hostname_devicetype_serialnumber(deviceId, ticket):
     return hostname, devicetype, serialnumber
 
 
-# This function will ask the user to input the file name to save data to
-# The function will return the file name, after appending .csv
+# The function will ask the user to input the file name to save data to
+# The function will append .csv and return the file name with extension
 
 def get_input_file():
     filename = input('Input the file name to save data to:  ') + '.csv'
     return filename
 
 
-# The function will build a list of ID's for all network devices
+# The function will build the ID's list for all network devices
 # The function will require one value, the Auth ticket
-# The function with return the device's ID as a list
+# The function will return the device's ID as a list
 # API call to sandboxapic.cisco.com/api/v1/network-device
 
 def get_device_Ids(ticket):
-    deviceIdList = []
+    device_Id_list = []
     url = 'https://' + CONTROLLER_URL + '/network-device'
     header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     device_response = requests.get(url, headers=header, verify=False)
@@ -95,13 +95,14 @@ def get_device_Ids(ticket):
     device_info = device_json['response']
     for items in device_info:
         device_id = items.get('id')
-        deviceIdList.append(device_id)
-    return deviceIdList
+        device_Id_list.append(device_id)
+    return device_Id_list
 
 
-# The function will create a list with a row for each device hostname, Serial Number, Licenses
+# The function will create a list of lists.
+# For each device we will have a list that includes - hostname, Serial Number, and active licenses
 # The function will require two values, the list with all device Id's and the Auth ticket
-# The function with return list with a row for each device
+# The function will return the list
 
 def collect_device_info (device_Id_list, ticket):
     all_devices_license_file = []
@@ -112,27 +113,26 @@ def collect_device_info (device_Id_list, ticket):
         serial_number = get_hostname_devicetype_serialnumber(device_Id, ticket)[2]
         license_file.append(host_name)
         license_file.append(serial_number)
-        devicelicense = get_license_device(device_Id, ticket)
-        for licenses in devicelicense:
+        device_license = get_license_device(device_Id, ticket)    # call the function to provide active licenses
+        for licenses in device_license:    # loop to append the provided active licenses to the device list
             license_file.append(licenses)
-        all_devices_license_file.append(license_file)
-#    print(json.dumps(all_devices_license_file, indent=4, separators=(' , ', ' : ')))
+        all_devices_license_file.append(license_file)    # append the created list for this device to the list of lists
     return all_devices_license_file
 
 
 # main program
 
 def main():
-    ticket = get_service_ticket()
-    device_Id_list = get_device_Ids(ticket)
-    devices_info = collect_device_info(device_Id_list, ticket)
-    filename = get_input_file()
-    outputFile = open(filename, 'w', newline='')
-    outputWriter = csv.writer(outputFile)
+    ticket = get_service_ticket()    # create an APIC-EM Auth ticket
+    device_Id_list = get_device_Ids(ticket)    # build a list with all device Id's
+    devices_info = collect_device_info(device_Id_list, ticket)    # create a list of lists. Each list will include hostname, S/N, active licenses
+    filename = get_input_file()    # ask user for filename input
+    output_file = open(filename, 'w', newline='')
+    outputWriter = csv.writer(output_file)
     for lists in devices_info:
         outputWriter.writerow(lists)
-    outputFile.close()
-    print (devices_info)
+    output_file.close()
+    print (devices_info)    # print for data validation
 
 if __name__ == '__main__':
     main()
