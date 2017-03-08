@@ -14,6 +14,17 @@ CONTROLLER_USER = 'devnetuser'
 CONTROLLER_PASSW = 'Cisco123!'
 
 
+def pprint(json_data):
+    """
+    Pretty print JSON formatted data
+    :param json_data:
+    :return:
+    """
+
+    print(json.dumps(json_data, indent=4, separators=(' , ', ' : ')))
+
+
+
 # The function will generate the Auth ticket required to access APIC-EM
 # The function will return the Auth ticket, if successful
 
@@ -43,16 +54,20 @@ def get_license_device (deviceId, ticket):
     header = {'accept': 'application/json', 'X-Auth-Token': ticket}
     payload = {'deviceId': deviceId}
     device_response = requests.get(url, params=payload, headers=header, verify=False)
-    device_json = device_response.json()
-    device_info = device_json['response']
-    for licenses in device_info:
-        try:    # required to avoid errors due to some devices, for example Access Points, that do not have an "inuse" license.
-            if licenses.get('status') == "INUSE":
-                new_license = licenses.get('name')
-                if new_license not in license_info:
-                    license_info.append(new_license)
-        except:
-            pass
+    if device_response.status_code == 200:
+        device_json = device_response.json()
+        device_info = device_json['response']
+        # pprint(device_info)    # use this for printing info about each device
+        for licenses in device_info:
+            try:    # required to avoid errors due to some devices, for example Access Points, that do not have an "inuse" license.
+                if licenses.get('status') == 'INUSE':
+                    new_license = licenses.get('name')
+                    if new_license not in license_info:
+                        license_info.append(new_license)
+            except:
+                pass
+    else:
+        pass
     return license_info
 
 
@@ -132,7 +147,7 @@ def main():
     for lists in devices_info:
         outputWriter.writerow(lists)
     output_file.close()
-    print (devices_info)    # print for data validation
+    # pprint(devices_info)    # print for data validation
 
 if __name__ == '__main__':
     main()
